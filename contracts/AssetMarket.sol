@@ -43,15 +43,8 @@ contract AssetMarket is ERC721{
         userSales[msg.sender].push(shopSales.length - 1);
     }
 
-    function saleById(uint256 id) view public returns(uint256[] memory) {
-        uint256[] memory userSalesById;
-
-        for (uint256 i; i < userSales[id]; i++) {
-            if(userSales[i] == id) {
-                userSalesById.push(id);
-            }
-        }
-        return userSalesById;
+    function saleById(uint256 id) view public returns(uint256 memory) {
+        return userSales[id];
     }
 
     function saleByAddress(address user) view public returns( Sale[] memory) {
@@ -63,5 +56,18 @@ contract AssetMarket is ERC721{
             }
         }
         return userSales;
+    }
+
+    function purchase(uint256 tokenId) public payable {
+        require(msg.value == Sale[tokenId].price, "Value is not enugh");
+        if (msg.value == Sale[tokenId].price) {
+            ERC721.transferFrom(msg.sender, address(this), msg.value);
+        } else if (msg.value > Sale[tokenId].price) {
+            uint256 overload = Sale[tokenId].price - msg.value;
+            ERC721.Transfer(msg.sender, address(this), Sale[tokenId].price - overload);
+            ERC721.Transfer(msg.sender, overload);
+
+        }
+        
     }
 }
