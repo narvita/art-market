@@ -9,10 +9,11 @@ contract AssetMarket is ERC721{
         uint256 tokenId;
         uint256 price;
         address contractAdress;
+        address owner;
     }
 
-    mapping (address => uint256) private contractAdress;
-    mapping (address => Sale[]) private sales;
+    mapping (address => uint256[]) public userSales;
+    Sale[] shopSales;
 
     constructor() ERC721("Asset", "AS") {
         owner = msg.sender; 
@@ -32,9 +33,35 @@ contract AssetMarket is ERC721{
 
     function sale(address contAddr, uint256 tokenId, uint256 price) public AssetOwner(contAddr, tokenId) {
         Sale memory newSale;
+
         newSale.tokenId = tokenId;
         newSale.price = price;
         newSale.contractAdress = contAddr;
-        sales[msg.sender].push(newSale);
+        newSale.owner = msg.sender;
+
+        shopSales.push(newSale);
+        userSales[msg.sender].push(shopSales.length - 1);
+    }
+
+    function saleById(uint256 id) view public returns(uint256[] memory) {
+        uint256[] memory userSalesById;
+
+        for (uint256 i; i < userSales[id]; i++) {
+            if(userSales[i] == id) {
+                userSalesById.push(id);
+            }
+        }
+        return userSalesById;
+    }
+
+    function saleByAddress(address user) view public returns( Sale[] memory) {
+        Sale memory userSales;
+        
+        for (uint256 i; i < Sale.lenght; i ++) {
+            if (Sale[i][owner] == user) {
+                userSales.push(Sale[i]);
+            }
+        }
+        return userSales;
     }
 }
