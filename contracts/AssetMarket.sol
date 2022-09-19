@@ -5,13 +5,14 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
 contract AssetMarket is ERC721{
     address owner;
-    struct contractAdress {
-        address token;
+    struct Sale {
+        uint256 tokenId;
         uint256 price;
+        address contractAdress;
     }
 
-    mapping (address => contractAdress[]) assets;
-
+    mapping (address => uint256) private contractAdress;
+    mapping (address => Sale[]) private sales;
 
     constructor() ERC721("Asset", "AS") {
         owner = msg.sender; 
@@ -23,8 +24,17 @@ contract AssetMarket is ERC721{
     }
 
     
-    modifier AssetOwner(address ContractAddress, uint256 tokenId) {
-        require(msg.sender == IERC721(ContractAddress).ownerOf(tokenId), "You are not an owner");
+    modifier AssetOwner(address contractAddress, uint256 tokenId) {
+        require(msg.sender == IERC721(contractAddress).ownerOf(tokenId), "You are not an owner");
         _;
+    }
+
+
+    function sale(address contAddr, uint256 tokenId, uint256 price) public AssetOwner(contAddr, tokenId) {
+        Sale memory newSale;
+        newSale.tokenId = tokenId;
+        newSale.price = price;
+        newSale.contractAdress = contAddr;
+        sales[msg.sender].push(newSale);
     }
 }
