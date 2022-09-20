@@ -3,9 +3,15 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
-contract GyuliArt is ERC721 {
+contract GyuliArt is ERC721, ERC721URIStorage {
+
+    using Counters for Counters.Counter;
     address public owner;
+
+    string private __baseURI;
+    Counters.Counter private _tokenIdCounter;
 
 
     event InterfaceSupport(bytes4 interfaceId);
@@ -15,8 +21,9 @@ contract GyuliArt is ERC721 {
     event SafeMint(address account, uint256 amount);
 
 
-    constructor() ERC721("GyuliArt", "GA") {
+    constructor(string memory baseURI) ERC721("GyuliArt", "GA") {
         owner = msg.sender;
+        __baseURI = baseURI;
     }
 
     modifier OnlyOwner() {
@@ -24,13 +31,17 @@ contract GyuliArt is ERC721 {
         _;
     }
 
-    // function _burn(uint256 tokenId) internal override(ERC721) {
-    //     super._burn(tokenId);
-    // }
+    function _baseURI() internal view override returns (string memory) {
+        return __baseURI;
+    }
 
-    // function BuyArt() public payable {
-
-    // }
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+    
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return super.tokenURI(tokenId);
+    }
 
     function approve(address to, uint256 tokenId) public override {
         address owner = ERC721.ownerOf(tokenId);
