@@ -11,6 +11,20 @@ contract AssetMarket {
         address contractAdress;
         address owner;
     }
+
+    struct Bid {
+        uint256 value;
+        address bidderAddresses;
+    }
+
+    struct Auction {
+        uint256 tokenId;
+        uint256 price;
+        address contractAdress;
+        address owner;
+        Bid[] bid;
+    }
+
     mapping (address => uint256[]) public userSalesIds;
     Sale[] shopSales;
 
@@ -33,6 +47,7 @@ contract AssetMarket {
 
     function sale(address contAddr, uint256 tokenId, uint256 price) public  AssetOwner(contAddr, tokenId) {
         require(ERC721(contAddr).getApproved(tokenId) == address(this), "not appeoved");
+        require(contAddr != address(0), "Address should not be 0");
         Sale memory newSale;
         newSale.tokenId = tokenId;
         newSale.price = price;
