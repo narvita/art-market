@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
-contract AssetMarket is ERC721{
+contract AssetMarket {
     address owner;
     struct Sale {
         uint256 tokenId;
@@ -11,12 +11,12 @@ contract AssetMarket is ERC721{
         address contractAdress;
         address owner;
     }
-
-    mapping (address => uint256[]) public userSales;
+    mapping (address => uint256[]) public userSalesIds;
     Sale[] shopSales;
 
-    constructor() ERC721("Asset", "AS") {
-        owner = msg.sender; 
+    constructor() {
+        owner = msg.sender;
+
     }
 
     modifier OnlyOwner() {
@@ -31,43 +31,44 @@ contract AssetMarket is ERC721{
     }
 
 
-    function sale(address contAddr, uint256 tokenId, uint256 price) public AssetOwner(contAddr, tokenId) {
+    function sale(address contAddr, uint256 tokenId, uint256 price) public  AssetOwner(contAddr, tokenId) {
+        require(ERC721(contAddr).getApproved(tokenId) == address(this), "not appeoved");
         Sale memory newSale;
-
         newSale.tokenId = tokenId;
         newSale.price = price;
         newSale.contractAdress = contAddr;
         newSale.owner = msg.sender;
 
         shopSales.push(newSale);
-        userSales[msg.sender].push(shopSales.length - 1);
+        userSalesIds[msg.sender].push(shopSales.length - 1);
     }
 
-    function saleById(uint256 id) view public returns(uint256 memory) {
-        return userSales[id];
+    function saleById(uint256 id) view public returns (Sale memory) {
+        return shopSales[id]; 
     }
 
     function saleByAddress(address user) view public returns( Sale[] memory) {
-        Sale memory userSales;
+        uint arraylenght = shopSales.length;
         
-        for (uint256 i; i < Sale.lenght; i ++) {
-            if (Sale[i][owner] == user) {
-                userSales.push(Sale[i]);
+        Sale[] memory _userSalesIds = new Sale[](arraylenght);
+
+        for (uint i = 0; i < arraylenght; i++) {
+            require(shopSales[i].owner == user, "You are not an owner");
+            if (shopSales[i].owner == user) {
+                _userSalesIds[i] = shopSales[i];
             }
+            return _userSalesIds;
         }
-        return userSales;
     }
 
-    function purchase(uint256 tokenId) public payable {
-        require(msg.value == Sale[tokenId].price, "Value is not enugh");
-        if (msg.value == Sale[tokenId].price) {
-            ERC721.transferFrom(msg.sender, address(this), msg.value);
-        } else if (msg.value > Sale[tokenId].price) {
-            uint256 overload = Sale[tokenId].price - msg.value;
-            ERC721.Transfer(msg.sender, address(this), Sale[tokenId].price - overload);
-            ERC721.Transfer(msg.sender, overload);
+    function purchase(uint256 saleId) public payable {
+        require(msg.value >= shopSales[saleId].price, "Value is not enugh");
+        uint256 overPrice = msg.value - shopSales[saleId].price;
+        ERC721(shopSales[saleId].contractAdress).approve(address(this), saleId);
+        ERC721(shopSales[saleId].contractAdress).transferFrom(msg.sender, address(this), shopSales[saleId].tokenId); 
 
-        }
-        
+        if(overPrice > 0) {
+            payable(msg.sender).transfer(overPrice);
+        }   
     }
 }
