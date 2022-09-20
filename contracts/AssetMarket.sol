@@ -22,6 +22,8 @@ contract AssetMarket {
         uint256 price;
         address contractAdress;
         address owner;
+        uint256 timeStamp;
+        uint256 auctionDuration;
         Bid[] bid;
     }
 
@@ -56,6 +58,21 @@ contract AssetMarket {
 
         shopSales.push(newSale);
         userSalesIds[msg.sender].push(shopSales.length - 1);
+    }
+
+    function createAuction (
+        address contractaddress, 
+        uint256 tokenId, 
+        uint256 price, 
+        uint256 auctionDuration) public AssetOwner (contractaddress, tokenId) {
+
+        Auction memory newAuction;
+        newAuction.tokenId = tokenId;
+        newAuction.price = price;
+        newAuction.contractAdress = contractaddress;
+        newAuction.owner = msg.sender;
+        newAuction.timeStamp = block.timestamp + auctionDuration;
+        newAuction.auctionDuration = auctionDuration;
     }
 
     function saleById(uint256 id) view public returns (Sale memory) {
