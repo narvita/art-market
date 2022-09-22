@@ -93,9 +93,7 @@ contract AssetMarket {
         require(msg.value >= shopAuctions[auctionId].price, "Sum cannot be less then auction amount");
         require(msg.sender != address(0), "Can't user zero address");
         
-        shopAuctions[auctionId].price = msg.value;
-
-
+        shopAuctions[auctionId].price += msg.value;
         
         Bid[] memory auctionArr = auctionBids[auctionId];
 
@@ -141,18 +139,9 @@ contract AssetMarket {
         payable(shopAuctions[auctionId].owner).transfer(maxBid);
         IERC721(shopAuctions[auctionId].contractAdress).transferFrom(address(this), winner, shopAuctions[auctionId].tokenId); 
     }
-    
-    function higestBid(uint256 auctionId) view public returns(uint256) {
-        Bid[] memory bidArr = auctionBids[auctionId];
-        uint256 maxBid = bidArr[0].value; 
 
-
-        for(uint256 i = 1; i < bidArr.length; i++) {
-            if(maxBid < bidArr[i].value) {
-                maxBid = bidArr[i].value;
-            }
-        }
-        return maxBid;
+    function highestBid(uint256 auctionId) view public returns(uint256) {
+        return shopAuctions[auctionId].price;
     }
 
  
