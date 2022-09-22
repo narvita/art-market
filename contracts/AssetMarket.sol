@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "./interfaces/IERC721.sol";
 
 contract AssetMarket {
     address owner;
@@ -50,7 +50,7 @@ contract AssetMarket {
 
 
     function sale(address contAddr, uint256 tokenId, uint256 price) public  AssetOwner(contAddr, tokenId) {
-        require(ERC721(contAddr).getApproved(tokenId) == address(this), "not appeoved");
+        require(IERC721(contAddr).getApproved(tokenId) == address(this), "not appeoved");
         require(contAddr != address(0), "Address should not be 0");
         Sale memory newSale;
         newSale.tokenId = tokenId;
@@ -68,7 +68,7 @@ contract AssetMarket {
         uint256 price, 
         uint256 auctionDuration) public AssetOwner (contractaddress, tokenId) {
 
-        require(ERC721(contractaddress).getApproved(tokenId) == address(this), "Market is not approved for the token");
+        require(IERC721(contractaddress).getApproved(tokenId) == address(this), "Market is not approved for the token");
         require(contractaddress != address(0), "Can't user zero address");
         require(price > 0, "Price should be more then 0");
 
@@ -82,56 +82,64 @@ contract AssetMarket {
         newAuction.timeStamp = block.timestamp + (auctionDuration * 1 days);
 
         shopAuctions.push(newAuction);
-        ERC721(contractaddress).transferFrom(msg.sender, address(this), newAuction.price);
+        IERC721(contractaddress).transferFrom(msg.sender, address(this), tokenId);
     }
 
     function bid(uint256 auctionId) public payable {
         require(auctionId < shopAuctions.length, "Auction does not exist");
-        require(shopAuctions[auctionId].timeStamp <= block.timestamp, "Auction already ended");
+        require(shopAuctions[auctionId].timeStamp > block.timestamp, "Auction already ended");
         require(msg.value > 0, "Sum cannot be 0");
         require(msg.sender != shopAuctions[auctionId].owner, "Owner cannot do bid");
         require(msg.value >= shopAuctions[auctionId].price, "Sum cannot be less then auction amount");
+        require(msg.sender != address(0), "Can't user zero address");
+        
+        shopAuctions[auctionId].price = msg.value;
 
-        if (msg.value > shopAuctions[auctionId].price) {
-            shopAuctions[auctionId].price = msg.value;
-        }
 
-        Bid memory newBid;
+        
         Bid[] memory auctionArr = auctionBids[auctionId];
-
-        newBid.value = msg.value;
-        newBid.bidderAddress = msg.sender;
 
         bool exist = false;
 
         for (uint256 i = 0; i < auctionArr.length; i ++ ) {
             if(auctionArr[i].bidderAddress == msg.sender) {
-                auctionArr[i].value += msg.value;
+                auctionBids[auctionId][i].value += msg.value;
                 exist = true;
             }
         }
-        if(exist){
+
+        if(!exist){
+            Bid memory newBid;
+            newBid.value = msg.value;
+            newBid.bidderAddress = msg.sender;
+
             auctionBids[auctionId].push(newBid);
         }
     }
 
 
     function executeAuction(uint256 auctionId) public {
-        Bid[] memory auctionArr = auctionBids[auctionId];
-        uint256 maxBid = auctionArr[0].value; 
-        address winner;
+        require(owner != address(0), "Can't user zero address");
 
-        for (uint256 i = 0; i < auctionArr.length; i++ ) {
-            if(maxBid < auctionArr[i].value) {
-                maxBid = auctionArr[i].value;
-                winner = auctionArr[i].bidderAddress;
+        Bid[] memory bidArr = auctionBids[auctionId];
+        
+        uint256 maxBid = bidArr[0].value; 
+        address winner = bidArr[0].bidderAddress;
+
+        for (uint256 i = 1; i < bidArr.length; i++ ) {
+            if(maxBid < bidArr[i].value) {
+
+                payable(winner).transfer(maxBid);
+
+                maxBid = bidArr[i].value;
+                winner = bidArr[i].bidderAddress;
+            } else {
+                payable(bidArr[i].bidderAddress).transfer(bidArr[i].value);
             }
-            payable(auctionArr[i].bidderAddress).transfer(auctionArr[i].value);
-
         }
-
-        ERC721(shopAuctions[auctionId].contractAdress).transferFrom(address(this), winner, maxBid);
-            
+        
+        payable(shopAuctions[auctionId].owner).transfer(maxBid);
+        IERC721(shopAuctions[auctionId].contractAdress).transferFrom(address(this), winner, shopAuctions[auctionId].tokenId); 
     }
 
  
@@ -193,8 +201,8 @@ contract AssetMarket {
         require(msg.value >= shopSales[saleId].price, "Value is not enugh");
 
         uint256 overPrice = msg.value - shopSales[saleId].price;
-        ERC721(shopSales[saleId].contractAdress).approve(address(this), saleId);
-        ERC721(shopSales[saleId].contractAdress).transferFrom(msg.sender, address(this), shopSales[saleId].tokenId); 
+        IERC721(shopSales[saleId].contractAdress).approve(address(this), saleId);
+        IERC721(shopSales[saleId].contractAdress).transferFrom(msg.sender, address(this), shopSales[saleId].tokenId); 
 
         if(overPrice > 0) {
             payable(msg.sender).transfer(overPrice);
