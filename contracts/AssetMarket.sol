@@ -144,6 +144,15 @@ contract AssetMarket {
         return shopAuctions[auctionId].price;
     }
 
+    function currentBid(uint256 auctionId) view public returns(uint256) {
+        Bid[] memory bidArr = auctionBids[auctionId];
+        
+        for (uint256 i = 0; i < bidArr.length; i ++ ) {
+            if(bidArr[i].bidderAddress == msg.sender) {
+                return bidArr[i].value;
+            }
+        }
+    }
  
     function saleById(uint256 id) view public returns (Sale memory) {
         return shopSales[id]; 
