@@ -141,6 +141,19 @@ contract AssetMarket {
         payable(shopAuctions[auctionId].owner).transfer(maxBid);
         IERC721(shopAuctions[auctionId].contractAdress).transferFrom(address(this), winner, shopAuctions[auctionId].tokenId); 
     }
+    
+    function higestBid(uint256 auctionId) view public returns(uint256) {
+        Bid[] memory bidArr = auctionBids[auctionId];
+        uint256 maxBid = bidArr[0].value; 
+
+
+        for(uint256 i = 1; i < bidArr.length; i++) {
+            if(maxBid < bidArr[i].value) {
+                maxBid = bidArr[i].value;
+            }
+        }
+        return maxBid;
+    }
 
  
     function saleById(uint256 id) view public returns (Sale memory) {
