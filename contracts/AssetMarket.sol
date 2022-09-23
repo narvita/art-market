@@ -99,13 +99,18 @@ contract AssetMarket {
         for (uint256 i = 0; i < auctionArr.length; i ++ ) {
             if(auctionArr[i].bidderAddress == msg.sender) {
                 auctionBids[auctionId][i].value += msg.value;
+
+                if (auctionBids[auctionId][i].value > shopAuctions[auctionId].minBid) {
+                    shopAuctions[auctionId].minBid = auctionBids[auctionId][i].value;
+                }
+
                 exist = true;
             }
         }
 
+
         if(!exist){
             require(msg.value >= shopAuctions[auctionId].minBid, "Bid cannot be less then auction minBid");
-
             Bid memory newBid;
             newBid.value = msg.value;
             newBid.bidderAddress = msg.sender;
@@ -157,30 +162,33 @@ contract AssetMarket {
     function cencelBid(uint256 auctionId)  public {
         Bid[] storage bidArr = auctionBids[auctionId]; 
         uint256 maxBid = bidArr[0].value; 
+        bool maxBidOwner = false;
 
         for (uint256 i = 0; i < bidArr.length; i ++ ) {
 
-            if(bidArr[i].bidderAddress == msg.sender && shopAuctions[auctionId].minBid == bidArr[i].value) {
-                shopAuctions[auctionId].minBid -= bidArr[i].value;
+            if(bidArr[i].bidderAddress == msg.sender) {
+
+                if(shopAuctions[auctionId].minBid == bidArr[i].value) {
+                    maxBidOwner = true;
+                }
                 payable(msg.sender).transfer(bidArr[i].value);
                 bidArr[i] = bidArr[bidArr.length - 1];
                 bidArr.pop();
+                break ;
 
-            } else if (bidArr[i].bidderAddress == msg.sender) {
-                payable(msg.sender).transfer(bidArr[i].value);
-                bidArr[i] = bidArr[bidArr.length - 1];
-                bidArr.pop();
             } 
-            
-        }
 
-        for (uint256 i = 1; i < bidArr.length; i++ ) {
-            if(maxBid < bidArr[i].value) {
-                maxBid = bidArr[i].value;
-            } 
         }
         
-        shopAuctions[auctionId].minBid = maxBid;
+        if(maxBidOwner) {
+            for (uint256 j = 1; j < bidArr.length; j++ ) {
+                if(maxBid < bidArr[j].value) {
+                    maxBid = bidArr[j].value;
+                } 
+            }
+            shopAuctions[auctionId].minBid = maxBid;
+
+        }
     }
  
     function saleById(uint256 id) view public returns (Sale memory) {
