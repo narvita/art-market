@@ -19,7 +19,7 @@ contract AssetMarket {
 
     struct Auction {
         uint256 tokenId;
-        uint256 price;
+        uint256 minBid;
         address contractAdress;
         address owner;
         uint256 auctionDuration;
@@ -65,17 +65,17 @@ contract AssetMarket {
     function auction (
         address contractaddress, 
         uint256 tokenId, 
-        uint256 price, 
+        uint256 minBid, 
         uint256 auctionDuration) public AssetOwner (contractaddress, tokenId) {
 
         require(IERC721(contractaddress).getApproved(tokenId) == address(this), "Market is not approved for the token");
         require(contractaddress != address(0), "Can't user zero address");
-        require(price > 0, "Price should be more then 0");
+        require(minBid > 0, "Price should be more then 0");
 
         Auction memory newAuction;
 
         newAuction.tokenId = tokenId;
-        newAuction.price = price;
+        newAuction.minBid = minBid;
         newAuction.contractAdress = contractaddress;
         newAuction.owner = msg.sender;
         newAuction.auctionDuration = auctionDuration;
@@ -90,11 +90,8 @@ contract AssetMarket {
         require(shopAuctions[auctionId].timeStamp > block.timestamp, "Auction already ended");
         require(msg.value > 0, "Sum cannot be 0");
         require(msg.sender != shopAuctions[auctionId].owner, "Owner cannot do bid");
-        require(msg.value >= shopAuctions[auctionId].price, "Sum cannot be less then auction amount");
         require(msg.sender != address(0), "Can't user zero address");
-        
-        shopAuctions[auctionId].price += msg.value;
-        
+                
         Bid[] memory auctionArr = auctionBids[auctionId];
 
         bool exist = false;
@@ -107,9 +104,12 @@ contract AssetMarket {
         }
 
         if(!exist){
+            require(msg.value >= shopAuctions[auctionId].minBid, "Bid cannot be less then auction minBid");
+
             Bid memory newBid;
             newBid.value = msg.value;
             newBid.bidderAddress = msg.sender;
+            shopAuctions[auctionId].minBid = msg.value;
 
             auctionBids[auctionId].push(newBid);
         }
@@ -141,9 +141,8 @@ contract AssetMarket {
     }
 
     function highestBid(uint256 auctionId) view public returns(uint256) {
-        return shopAuctions[auctionId].price;
+        return shopAuctions[auctionId].minBid;
     }
-
 
     function currentBid(uint256 auctionId) view public returns(uint256) {
         Bid[] memory bidArr = auctionBids[auctionId];
@@ -153,6 +152,35 @@ contract AssetMarket {
                 return bidArr[i].value;
             }
         }
+    }
+
+    function cencelBid(uint256 auctionId)  public {
+        Bid[] storage bidArr = auctionBids[auctionId]; 
+        uint256 maxBid = bidArr[0].value; 
+
+        for (uint256 i = 0; i < bidArr.length; i ++ ) {
+
+            if(bidArr[i].bidderAddress == msg.sender && shopAuctions[auctionId].minBid == bidArr[i].value) {
+                shopAuctions[auctionId].minBid -= bidArr[i].value;
+                payable(msg.sender).transfer(bidArr[i].value);
+                bidArr[i] = bidArr[bidArr.length - 1];
+                bidArr.pop();
+
+            } else if (bidArr[i].bidderAddress == msg.sender) {
+                payable(msg.sender).transfer(bidArr[i].value);
+                bidArr[i] = bidArr[bidArr.length - 1];
+                bidArr.pop();
+            } 
+            
+        }
+
+        for (uint256 i = 1; i < bidArr.length; i++ ) {
+            if(maxBid < bidArr[i].value) {
+                maxBid = bidArr[i].value;
+            } 
+        }
+        
+        shopAuctions[auctionId].minBid = maxBid;
     }
  
     function saleById(uint256 id) view public returns (Sale memory) {
