@@ -157,6 +157,7 @@ contract AssetMarket {
                 return bidArr[i].value;
             }
         }
+        return 0;
     }
 
     function cencelBid(uint256 auctionId)  public {
