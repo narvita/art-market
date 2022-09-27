@@ -8,11 +8,11 @@ const ZERO_ADDRESS = "0x00000000000000000000000000000000"
 describe("Art", function () {
     let artContract;
 	let owner;
-	let tokenOwner;
-	let tokenApproved;
+	let user2;
+	let user3;
 
 	beforeEach(async () => {
-		[owner, tokenOwner, tokenApproved] = await hre.ethers.getSigners();
+		[owner, user2, user3] = await hre.ethers.getSigners();
 		const Art = await hre.ethers.getContractFactory("Art")
 		const art = await Art.deploy(
 			NAME,
@@ -25,6 +25,7 @@ describe("Art", function () {
 	})
 
 	describe("Deploy", async () => {
+
 		it("Be delpoyed", () => {
 			const address = artContract.address;
 			expect(address).to.exist;
@@ -56,46 +57,50 @@ describe("Art", function () {
 
 		const tokenId = 0;
 		beforeEach(async() => {
-			const mintTx = await artContract.safeMint(tokenOwner.address, tokenId);
+			const mintTx = await artContract.safeMint(user2.address, tokenId);
 			await mintTx.wait();
 		})
 
 		it("Owner should be correct", async () => {
-			const tokenOwner = await artContract.ownerOf(tokenId);
-			expect(tokenOwner).to.be.equal(tokenOwner.address);
+			const user2 = await artContract.ownerOf(tokenId);
+			expect(user2).to.be.equal(user2);
 		})
 
 		it("Owner should have balance", async () => {
 			const balance = 1;
 
-			const addressBalance = await artContract.balanceOf(tokenOwner.address);
+			const addressBalance = await artContract.balanceOf(user2.address);
 			expect(addressBalance).to.be.equal(balance);
 		})
 
 	})
 
-	// describe("Burn", () => {
-	// 	let tokenId = 0;
-	// 	beforeEach(async() => {
-	// 		const burn = await artContract.burn(tokenId);
-	// 		await burn.wait();
-	// 	})
+	describe("Burn", () => {
+		let tokenId = 0;
+		beforeEach(async() => {
+			const mintTx = await artContract.safeMint(user2.address, tokenId);
+			await mintTx.wait();
+			
+		})
 
-	// 	it("Owner should be correct", async () => {
-	// 		const tokenOwner = await artContract.ownerOf(tokenId);
-	// 		expect(tokenOwner).to.be.equal(tokenOwner.address);
-	// 	})
+		it("Owner should be correct", async () => {
+			const user2 = await artContract.ownerOf(tokenId);
+			expect(user2).to.be.equal(user2);
+		})
 
-	// 	it("Owner should have balance", async () => {
-	// 		let balance = 1;
-	// 		const addressBalance = await artContract.balanceOf(tokenOwner.address);
-	// 		expect(addressBalance).to.be.equal(balance);
-	// 	})
+		it("Owner should have balance", async () => {
+			let balance = 1;
+			const addressBalance = await artContract.balanceOf(user2.address);
+			expect(addressBalance).to.be.equal(balance);
+		})
 		
-	// 	it("", async () => {
-	// 		const 
-	// 	})
-	// })
+		it("Balance should be 0 ", async () => {
+			const burn = await artContract.connect(user2)["burn(uint256)"](tokenId);
+			await burn.wait();
+			const balance = await artContract.balanceOf(user2.address);
+			expect(balance).to.be.equal(0);
+		})
+	})
 
 	describe("Approval", async() => {
 		let tokenId = 0;
@@ -106,21 +111,18 @@ describe("Art", function () {
 
 		it("getApproved for token without approved should return zero ", async () => {
 			const getApproved = await artContract.connect(owner).getApproved(tokenId);
-			console.log(getApproved);
 			expect(parseInt( getApproved, 16)).to.be.equal(0);
 		})
 
 		it("getApproved for token with approved should return approved address", async () => {
-			const txApprove = await artContract.connect(owner).approve(tokenOwner.address, tokenId);
+			const txApprove = await artContract.connect(owner).approve(user2.address, tokenId);
 			await txApprove.wait();
 			const getApproved = await artContract.connect(owner).getApproved(tokenId);
-			console.log(getApproved);
-
-			expect(getApproved).to.be.equal(tokenOwner.address);
+			expect(getApproved).to.be.equal(user2.address);
 		})
 
 		it("Approval from non-owner-tokens should fail", async () => {
-			const txApprove = await artContract.connect(tokenOwner).approve(tokenApproved.address, tokenId);
+			const txApprove = await artContract.connect(user2).approve(user3.address, tokenId);
 			await txApprove.wait();
 			expect(txApprove).to.be.revertedWith("ERC721: approve caller is not token owner nor approved for all");
 		})
@@ -143,9 +145,9 @@ describe("Art", function () {
 		})
 
 		it("Transfer to 0 address should fail",  async () => {
-			const txTransferFrom = artContract.connect(tokenOwner)
+			const txTransferFrom = artContract.connect(user2)
 									["transferFrom(address,address,uint256)"]
-									(tokenOwner, contracts.ZERO_ADDRESS, tokenId);
+									(user2, contracts.ZERO_ADDRESS, tokenId);
 
 			expect(txTransferFrom).to.be.revertedWith("ERC721: transfer from incorrect owner");
 		})
@@ -153,31 +155,29 @@ describe("Art", function () {
 		it("Transfer from non token owner should fail",  async () => {
 			const txTransferFrom = 
 			artContract.connect(owner)["transferFrom(address,address,uint256)"]
-			(tokenOwner, contracts.ZERO_ADDRESS, tokenId);
+			(user2, contracts.ZERO_ADDRESS, tokenId);
 
 			expect(txTransferFrom).to.be.revertedWith("ERC721: transfer from incorrect owner");
 		})
 
 
 		it("Transfer from token owner should successed", async () => {
-			const txTransferFrom = await artContract.connect(tokenOwner).transferFrom(tokenOwner.address, tokenApproved.address, tokenId);
+			const txTransferFrom = await artContract.connect(owner).transferFrom(owner.address, user3.address, tokenId);
 			await txTransferFrom.wait();
 			const newOwner = await artContract.ownerOf(tokenId);
-			expect(newOwner).to.be.equal(tokenApproved.address);
+			expect(newOwner).to.be.equal(user3.address);
 		})
 
 		it("Transfer for approved address should work", async () => {
-			const txApprove = await artContract.connect(owner).approve(tokenOwner.address, tokenId);
+			const txApprove = await artContract.connect(owner).approve(user2.address, tokenId);
 			await txApprove.wait();
-			await artContract.connect(tokenOwner)
+			await artContract.connect(user2)
 							["transferFrom(address,address,uint256)"](
 															owner.address,
-															tokenApproved.address,
+															user3.address,
 															tokenId);
 			const newOwner = await artContract.ownerOf(tokenId);
-			console.log(newOwner, tokenApproved.address);
-
-			expect(newOwner).to.be.equal(tokenApproved.address);
+			expect(newOwner).to.be.equal(user3.address);
 
 		});
 		
