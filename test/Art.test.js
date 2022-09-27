@@ -58,7 +58,6 @@ describe("Art", function () {
 		const tokenId = 0;
 		beforeEach(async() => {
 			const mintTx = await artContract.safeMint(user2.address, tokenId);
-			await mintTx.wait();
 		})
 
 		it("Owner should be correct", async () => {
@@ -72,13 +71,11 @@ describe("Art", function () {
 		})
 
 		it("Should fail if caller is not contract owner", async () => {
-			const caller = await artContract.connect(user2).safeMint(user2.address, tokenId);
-			expect(caller).to.be.revertedWith("Ownable: caller is not the owner")
+			expect(artContract.connect(user2).safeMint(user3.address, tokenId)).to.be.revertedWith("Ownable: caller is not the owner")
 		})
 
 		it("Should fail if minted to zero address", async () => {
-			const caller = await artContract.safeMint(ZERO_ADDRESS, tokenId);
-			expect(caller).to.be.revertedWith("ERC721: mint to the zero address")
+			expect(artContract.safeMint(ZERO_ADDRESS, tokenId)).to.be.revertedWith("ERC721: mint to the zero address")
 		})
 
 	})
@@ -93,98 +90,76 @@ describe("Art", function () {
 		
 		it("Balance should be 0 ", async () => {
 			const burn = await artContract.connect(user2)["burn(uint256)"](tokenId);
-			await burn.wait();
 			const balance = await artContract.balanceOf(user2.address);
 			expect(balance).to.be.equal(0);
 		})
 
 		it("Should fail if token invalid", async () => {
-			const burn = await artContract.connect(user2)["burn(uint256)"](tokenId);
-			await burn.wait();
-			const owner = await artContract.ownerOf(tokenId);
-			expect(owner).to.be.revertedWith("ERC721: invalid token ID");
+			expect(await artContract.connect(user2)["burn(uint256)"](tokenId)).to.be.revertedWith("ERC721: invalid token ID");
 		})
-
+                         
 		it("Should fail if caller is not token owner", async () => {
-			const burn = await artContract.connect(user3)["burn(uint256)"](tokenId);
-			await burn.wait();
-			const owner = await artContract.ownerOf(tokenId);
-			expect(owner).to.be.revertedWith("ERC721: invalid token ID");
+			expect( await artContract.connect(user3)["burn(uint256)"](tokenId)).to.be.revertedWith("ERC721: invalid token ID");
 		})
 	})
 
 	describe("Approval", async() => {
 		let tokenId = 0;
 		beforeEach(async() => {
-			const mintTx = await artContract.safeMint(owner.address, tokenId);
-			await mintTx.wait();
+			const mintTx = await artContract.safeMint(user2.address, tokenId);
 		})
 
 		it("getApproved for token without approved should return zero ", async () => {
-			const getApproved = await artContract.connect(owner).getApproved(tokenId);
+			const getApproved = await artContract.connect(user2).getApproved(tokenId);
 			expect(parseInt( getApproved, 16)).to.be.equal(0);
 		})
 
 		it("getApproved for token with approved should return approved address", async () => {
-			const txApprove = await artContract.connect(owner).approve(user2.address, tokenId);
-			await txApprove.wait();
+			const txApprove = await artContract.connect(user2).approve(user3.address, tokenId);
 			const getApproved = await artContract.connect(owner).getApproved(tokenId);
-			expect(getApproved).to.be.equal(user2.address);
+			expect(getApproved).to.be.equal(user3.address);
 		})
 
 		it("Approval from non-owner-tokens should fail", async () => {
 			const txApprove = await artContract.connect(user2).approve(user3.address, tokenId);
-			await txApprove.wait();
 			expect(txApprove).to.be.revertedWith("ERC721: approve caller is not token owner nor approved for all");
 		})
 
 		it("Self approval should fail", async () =>  {
-			const txApprove = await artContract.connect(owner).approve(owner.address, tokenId);
-			await txApprove.wait();
-			expect(txApprove).to.be.revertedWith("ERC721: approval to current owner");
-
+			expect(artContract.connect(user2).approve(user2.address, tokenId)).
+			to.be.revertedWith("ERC721: approval to current owner");
 		})
-
 	})
 
 	describe("TransferFrom", async () => {
 		let tokenId = 0;
 
 		beforeEach(async () => {
-			const txMint = await artContract.safeMint(owner.address, tokenId);
-			await txMint.wait();
+			const txMint = await artContract.safeMint(user2.address, tokenId);
 		})
 
 		it("Transfer to 0 address should fail",  async () => {
-			const txTransferFrom = artContract.connect(user2)
-									["transferFrom(address,address,uint256)"]
-									(user2, contracts.ZERO_ADDRESS, tokenId);
-
-			expect(txTransferFrom).to.be.revertedWith("ERC721: transfer from incorrect owner");
+			expect(artContract.connect(user2)
+			["transferFrom(address,address,uint256)"]
+			(user2,ZERO_ADDRESS, tokenId)).to.be.revertedWith("ERC721: transfer from incorrect owner");
 		})
 
 		it("Transfer from non token owner should fail",  async () => {
-			const txTransferFrom = 
-			artContract.connect(owner)["transferFrom(address,address,uint256)"]
-			(user2, contracts.ZERO_ADDRESS, tokenId);
-
-			expect(txTransferFrom).to.be.revertedWith("ERC721: transfer from incorrect owner");
+			expect(artContract.connect(owner)["transferFrom(address,address,uint256)"]
+			(user2, user3, tokenId)).to.be.revertedWith("ERC721: transfer from incorrect owner");
 		})
 
-
 		it("Transfer from token owner should successed", async () => {
-			const txTransferFrom = await artContract.connect(owner).transferFrom(owner.address, user3.address, tokenId);
-			await txTransferFrom.wait();
+			await artContract.connect(user2).transferFrom(user2.address, user3.address, tokenId);
 			const newOwner = await artContract.ownerOf(tokenId);
 			expect(newOwner).to.be.equal(user3.address);
 		})
 
 		it("Transfer for approved address should work", async () => {
-			const txApprove = await artContract.connect(owner).approve(user2.address, tokenId);
-			await txApprove.wait();
-			await artContract.connect(user2)
+			await artContract.connect(user2).approve(owner.address, tokenId);
+			await artContract.connect(owner)
 							["transferFrom(address,address,uint256)"](
-															owner.address,
+															user2.address,
 															user3.address,
 															tokenId);
 			const newOwner = await artContract.ownerOf(tokenId);
