@@ -53,8 +53,8 @@ describe("Art", function () {
 
 	})
 	
-	describe("Token interaction", async () => {
-
+	describe("Mint", async () => {
+		const balance = 1;
 		const tokenId = 0;
 		beforeEach(async() => {
 			const mintTx = await artContract.safeMint(user2.address, tokenId);
@@ -67,10 +67,18 @@ describe("Art", function () {
 		})
 
 		it("Owner should have balance", async () => {
-			const balance = 1;
-
 			const addressBalance = await artContract.balanceOf(user2.address);
 			expect(addressBalance).to.be.equal(balance);
+		})
+
+		it("Should fail if caller is not contract owner", async () => {
+			const caller = await artContract.connect(user2).safeMint(user2.address, tokenId);
+			expect(caller).to.be.revertedWith("Ownable: caller is not the owner")
+		})
+
+		it("Should fail if minted to zero address", async () => {
+			const caller = await artContract.safeMint(ZERO_ADDRESS, tokenId);
+			expect(caller).to.be.revertedWith("ERC721: mint to the zero address")
 		})
 
 	})
@@ -82,23 +90,26 @@ describe("Art", function () {
 			await mintTx.wait();
 			
 		})
-
-		it("Owner should be correct", async () => {
-			const user2 = await artContract.ownerOf(tokenId);
-			expect(user2).to.be.equal(user2);
-		})
-
-		it("Owner should have balance", async () => {
-			let balance = 1;
-			const addressBalance = await artContract.balanceOf(user2.address);
-			expect(addressBalance).to.be.equal(balance);
-		})
 		
 		it("Balance should be 0 ", async () => {
 			const burn = await artContract.connect(user2)["burn(uint256)"](tokenId);
 			await burn.wait();
 			const balance = await artContract.balanceOf(user2.address);
 			expect(balance).to.be.equal(0);
+		})
+
+		it("Should fail if token invalid", async () => {
+			const burn = await artContract.connect(user2)["burn(uint256)"](tokenId);
+			await burn.wait();
+			const owner = await artContract.ownerOf(tokenId);
+			expect(owner).to.be.revertedWith("ERC721: invalid token ID");
+		})
+
+		it("Should fail if caller is not token owner", async () => {
+			const burn = await artContract.connect(user3)["burn(uint256)"](tokenId);
+			await burn.wait();
+			const owner = await artContract.ownerOf(tokenId);
+			expect(owner).to.be.revertedWith("ERC721: invalid token ID");
 		})
 	})
 
