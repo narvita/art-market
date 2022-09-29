@@ -57,6 +57,14 @@ describe("AssetMarket", function () {
 					to.be.revertedWith("You are not an asset owner");
 		})
 
+<<<<<<< HEAD
+=======
+		// it("Should fail if address is not approved", async () => {
+		// 	await expect(assetMarketContract.connect(user2)["sale(address,uint256,uint256)"](assetArt.address, tokenId, price)).
+		// 	to.be.revertedWith("not approved");
+		// })
+
+>>>>>>> 4b2703df4d9f3bec5d4de5abfd57d6765cd501f5
 		it("Should fail if address is not approved", async () => {
 			await expect(assetMarketContract.connect(user2)["sale(address,uint256,uint256)"](assetArt.address, tokenId, price)).
 			to.be.revertedWith("not approved");
@@ -297,6 +305,7 @@ describe("AssetMarket", function () {
 
 	})
 
+<<<<<<< HEAD
 	describe("purchase", async () => {
 		let tokenId = "0";
 		let saleId = "0";
@@ -324,5 +333,34 @@ describe("AssetMarket", function () {
 		})
 		
 	})
+=======
+	// describe("purchase", async () => {
+	// 	let tokenId = "0";
+	// 	let saleId = "0";
+	// 	let price = "1000000000000000000";
+
+	// 	beforeEach(async() => {
+	// 		await assetArt.safeMint(user2.address, tokenId);
+	// 		await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
+	// 		await assetMarketContract.connect(user2).sale(assetArt.address, tokenId, price);
+	// 	})
+
+	// 	it("Should success if value is enugh", async () => {
+	// 		let cost = "1000000000000000000";
+
+	// 		await assetMarketContract.connect(user3).purchase(0, {value: cost});
+	// 		let owner = await assetArt.ownerOf(tokenId);
+	// 		expect(owner).to.be.equal(user3.address);
+	// 	})
+
+	// 	it("Should fail if value is not enugh", async () => {
+	// 		let cost = "1000000000000000";
+
+	// 		await expect(assetMarketContract["purchase(uint256)"](tokenId, {value: cost})).to.be.
+	// 		revertedWith("Value is not enugh");
+	// 	})
+		
+	// })
+>>>>>>> 4b2703df4d9f3bec5d4de5abfd57d6765cd501f5
 
 }) 
