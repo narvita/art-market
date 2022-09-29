@@ -1,6 +1,5 @@
 const { expect, should } = require('chai');
 
-const ZERO_ADDRESS = "0x00000000000000000000000000000000";
 const NAME = "GyuliArt";
 const SYMBOL = "GA";
 const BASE_URI = "https://www.youtube.com/";
@@ -48,23 +47,27 @@ describe("AssetMarket", function () {
 	describe("Sale", () => {
 		let tokenId = "0";
 		let price = "1000000000000000000";
+		let saleId = 0;
 		beforeEach(async() => {
-			const mintTx = await assetArt.safeMint(user2.address, tokenId);
+			await assetArt.safeMint(user2.address, tokenId);
 		})
 
 		it("Should fail if caller is not token owner", async () => {
-			await expect(assetMarketContract.connect(user3)["sale(address,uint256,uint256)"](assetArt.address, tokenId, price)).
+			await expect(assetMarketContract.connect(user3)["sale(address,uint256,uint256)"]
+					(assetArt.address, tokenId, price)).
 					to.be.revertedWith("You are not an asset owner");
 		})
 
 		it("Should fail if address is not approved", async () => {
-			await expect(assetMarketContract.connect(user2)["sale(address,uint256,uint256)"](assetArt.address, tokenId, price)).
-			to.be.revertedWith("not approved");
+			await expect(assetMarketContract.connect(user3)["sale(address,uint256,uint256)"]
+					(assetArt.address, tokenId, price)).
+					to.be.revertedWith("You are not an asset owner");
 		})
 
 		it("Should fail if sale is note created", async () => {
 			await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
-			await assetMarketContract.connect(user2)["sale(address,uint256,uint256)"](assetArt.address, tokenId, price);
+			await assetMarketContract.connect(user2)["sale(address,uint256,uint256)"]
+					(assetArt.address, tokenId, price);
 
 			const userSales = await assetMarketContract.saleByAddress(user2.address);
 
@@ -85,14 +88,16 @@ describe("AssetMarket", function () {
 
 		it("Should fail if sale id does not exist ", async () => {
 			await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
-			await assetMarketContract.connect(user2)["sale(address,uint256,uint256)"](assetArt.address, tokenId, price);
-			const userSales = await assetMarketContract.saleById(tokenId);
+			await assetMarketContract.connect(user2)["sale(address,uint256,uint256)"]
+					(assetArt.address, tokenId, price);
+			const userSales = await assetMarketContract.saleById(saleId);
 			expect(userSales).to.not.be.empty;
 		})
 
-		it("Should fail if sale does not exist ", async () => {
+		it("Should fail if sale address does not exist ", async () => {
 			await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
-			await assetMarketContract.connect(user2)["sale(address,uint256,uint256)"](assetArt.address, tokenId, price);
+			await assetMarketContract.connect(user2)["sale(address,uint256,uint256)"]
+					(assetArt.address, tokenId, price);
 			const userSales = await assetMarketContract.saleByAddress(user2.address);
 			expect(userSales).to.not.be.empty;
 		})
@@ -103,47 +108,44 @@ describe("AssetMarket", function () {
 	describe("Auction", () => {
 
 		let tokenId = "0";
-		let price = "1000000000000000000";
 		let auctionDuration = "1111";
 		let minBid = "1000000000000000000";
-		let auctionId = "0";
-
 
 		beforeEach(async() => {
-			const mintTx = await assetArt.safeMint(user2.address, tokenId);
+			await assetArt.safeMint(user2.address, tokenId);
 		}) 
 
 		it("Should fail if caller is not token owner", async () => {
 			await expect(assetMarketContract.connect(user3)["auction(address,uint256,uint256,uint256)"]
-			(assetArt.address, tokenId, minBid,auctionDuration)).
+					(assetArt.address, tokenId, minBid, auctionDuration)).
 					to.be.revertedWith("You are not an asset owner");
 		})
 
 		it("Should fail if address is not approved", async () => {
-				await expect(assetMarketContract.connect(user2)["auction(address,uint256,uint256,uint256)"]
-				(assetArt.address, tokenId, minBid,auctionDuration)).
-				to.be.revertedWith("Market is not approved for the token");
+			await expect(assetMarketContract.connect(user2)["auction(address,uint256,uint256,uint256)"]
+					(assetArt.address, tokenId, minBid, auctionDuration)).
+					to.be.revertedWith("Market is not approved for the token");
 		})
 
-		it("Should fail if bid is 0", async () => {
+		it("Should fail if minbid is 0", async () => {
 			await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
 
 			await expect(assetMarketContract.connect(user2)["auction(address,uint256,uint256,uint256)"]
-			(assetArt.address, tokenId,0,auctionDuration)).
-			to.be.revertedWith("Price should be more then 0");
+					(assetArt.address, tokenId, 0, auctionDuration)).
+					to.be.revertedWith("Price should be more then 0");
 		})
 
 		it("Should fail if auction is not created", async () => {
 			await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
 			await assetMarketContract.connect(user2)["auction(address,uint256,uint256,uint256)"]
-			(assetArt.address, tokenId, minBid,auctionDuration);
+					(assetArt.address, tokenId, minBid, auctionDuration);
 
 			const auctions = await assetMarketContract.connect(user2).auctionByAddress(user2.address);
 
 			expect(auctions).to.not.be.empty;
 
 			const auction = auctions[0][0].toString();
-			expect(auction).to.be.equal(auctionId);
+			expect(auction).to.be.equal(tokenId);
 
 			const minBidPrice = auctions[0][1].toString();
 			expect(minBidPrice).to.be.equal(minBid);
@@ -158,18 +160,18 @@ describe("AssetMarket", function () {
 			expect(duration).to.be.equal(auctionDuration);
 		})
 
-		it("Should fail if sale id does not exist ", async () => {
+		it("Should fail if auction id does not exist ", async () => {
 			await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
 			await assetMarketContract.connect(user2)["auction(address,uint256,uint256,uint256)"]
-			(assetArt.address, auctionId, minBid,auctionDuration);
+					(assetArt.address, tokenId, minBid, auctionDuration);
 			const auctions = await assetMarketContract.auctionById(tokenId);
 			expect(auctions).to.not.be.empty;
 		})
 
-		it("Should fail if sale does not exist ", async () => {
+		it("Should fail if auction address not exist ", async () => {
 			await assetArt.connect(user2).approve(assetMarketContract.address, tokenId);
 			await assetMarketContract.connect(user2)["auction(address,uint256,uint256,uint256)"]
-			(assetArt.address, auctionId, minBid,auctionDuration);
+					(assetArt.address, tokenId, minBid, auctionDuration);
 			const auctions = await assetMarketContract.auctionByAddress(user2.address);
 			expect(auctions).to.not.be.empty;
 		})
@@ -195,7 +197,7 @@ describe("AssetMarket", function () {
 			expect(auction).to.not.be.empty;
 		})
 
-		it("highest bid should be success if highest bid is owners ", async () => {
+		it("Should be success if caller is highest bid owner", async () => {
 			await assetMarketContract.connect(user3).bid(auctionId, {value: cost});
 			const highestBid = await assetMarketContract.connect(user3).highestBid(auctionId);
 			expect(highestBid).to.be.equal(cost);
@@ -236,10 +238,9 @@ describe("AssetMarket", function () {
 
 	describe("executeAuction", async () => {
 		let tokenId = "0";
-		let price = "1000000000000000000";
 		let auctionDuration = "1111";
 		let minBid = "1000000000000000000";
-		let auctionId = "0";
+		let auctionId = 0;
 
 		beforeEach(async () => {
 			await assetArt.safeMint(user2.address, tokenId);
@@ -296,10 +297,9 @@ describe("AssetMarket", function () {
 		})
 
 	})
-	
+
 	describe("purchase", async () => {
-		let tokenId = "0";
-		let saleId = "0";
+		let tokenId = "0";		
 		let price = "1000000000000000000";
 
 		beforeEach(async() => {
