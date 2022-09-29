@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./interfaces/IERC721.sol";
 
 contract AssetMarket {
-    address owner;
+    address public owner;
     struct Sale {
         uint256 tokenId;
         uint256 price;
@@ -34,7 +34,6 @@ contract AssetMarket {
 
     constructor() {
         owner = msg.sender;
-
     }
 
     modifier OnlyOwner() {
@@ -42,15 +41,19 @@ contract AssetMarket {
         _;
     }
 
-    
+    modifier OnlyAuctionOwner(uint256 acuctionId) {
+        address auctionOwner = shopAuctions[acuctionId].owner;
+        require(msg.sender == auctionOwner, "You are not an auction owner");
+        _;
+    }
     modifier AssetOwner(address contractAddress, uint256 tokenId) {
-        require(msg.sender == IERC721(contractAddress).ownerOf(tokenId), "You are not an owner");
+        require(msg.sender == IERC721(contractAddress).ownerOf(tokenId), "You are not an asset owner");
         _;
     }
 
 
     function sale(address contAddr, uint256 tokenId, uint256 price) public  AssetOwner(contAddr, tokenId) {
-        require(IERC721(contAddr).getApproved(tokenId) == address(this), "not appeoved");
+        require(IERC721(contAddr).getApproved(tokenId) == address(this), "not approved");
         require(contAddr != address(0), "Address should not be 0");
         Sale memory newSale;
         newSale.tokenId = tokenId;
@@ -121,8 +124,8 @@ contract AssetMarket {
     }
 
 
-    function executeAuction(uint256 auctionId) public {
-        require(owner != address(0), "Can't user zero address");
+    function executeAuction(uint256 auctionId) public OnlyAuctionOwner(auctionId) {
+        require(owner != address(0), "Can't zero address be zero");
 
         Bid[] memory bidArr = auctionBids[auctionId];
         
@@ -247,14 +250,13 @@ contract AssetMarket {
     }
 
     function purchase(uint256 saleId) public payable {
-        require(msg.value >= shopSales[saleId].price, "Value is not enugh");
+       require(msg.value >= shopSales[saleId].price, "Value is not enugh");
 
         uint256 overPrice = msg.value - shopSales[saleId].price;
-        IERC721(shopSales[saleId].contractAdress).approve(address(this), saleId);
-        IERC721(shopSales[saleId].contractAdress).transferFrom(msg.sender, address(this), shopSales[saleId].tokenId); 
+        IERC721(shopSales[saleId].contractAdress).transferFrom(shopSales[saleId].owner, msg.sender, shopSales[saleId].tokenId); 
 
         if(overPrice > 0) {
             payable(msg.sender).transfer(overPrice);
-        }   
+        }  
     }
 }
